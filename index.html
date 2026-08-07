@@ -408,14 +408,14 @@
         // 1. Инициализация маски для телефона
         const phoneInput = document.getElementById('user-phone');
         const phoneMask = IMask(phoneInput, {
-            mask: '+375 (00) 000-00-00',
+            mask: '+{375} (00) 000-00-00',
             lazy: false // Показывает шаблон с префиксом +375 сразу при клике/фокусе
         });
 
         // 2. Настройки Telegram бота
         const BOT_TOKEN = '8939402047:AAFobx-8EJH9OA6vFJEh0uOTcWOS_EjWiQ4';
         const CHAT_ID = '1003491320';
-        
+
         const form = document.getElementById('tg-form');
         const submitBtn = document.getElementById('submit-btn');
         const statusDiv = document.getElementById('form-status');
@@ -423,8 +423,11 @@
         form.addEventListener('submit', function(e) {
             e.preventDefault();
 
-            // Проверяем, заполнил ли пользователь номер полностью
-            if (!phoneMask.isComplete) {
+            // Достаем только цифры из введенного номера
+            const unmaskedPhone = phoneMask.unmaskedValue; 
+
+            // В Беларуси полный номер содержит 12 цифр (375XXXXXXXXX)
+            if (unmaskedPhone.length < 12) {
                 statusDiv.className = 'text-center text-xs font-semibold p-3 rounded-xl bg-amber-50 text-amber-700 border border-amber-200';
                 statusDiv.innerText = '⚠️ Пожалуйста, введите номер телефона полностью.';
                 statusDiv.classList.remove('hidden');
@@ -471,7 +474,7 @@
                     
                     // Сброс формы и маски
                     form.reset();
-                    phoneMask.updateValue();
+                    phoneMask.typedValue = '';
                 } else {
                     throw new Error('Ошибка Telegram API');
                 }
