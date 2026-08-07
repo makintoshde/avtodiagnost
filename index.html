@@ -7,6 +7,7 @@
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="https://unpkg.com/imask"></script>
     <!-- Google Fonts: Inter -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
@@ -106,7 +107,7 @@
                             </div>
                             <div>
                                 <label class="block text-xs font-semibold text-slate-600 mb-1">Номер телефона</label>
-                                <input type="tel" id="user-phone" placeholder="+375 (29) 000-00-00" required class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent text-sm">
+                                <input type="tel" id="user-phone" required class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent text-sm">
                             </div>
                             <div>
                                 <label class="block text-xs font-semibold text-slate-600 mb-1">Марка авто и проблема</label>
@@ -404,10 +405,17 @@
     </div>
 
     <script>
-        // Настройки Telegram бота
-        const BOT_TOKEN = '8939402047:AAFobx-8EJH9OA6vFJEh0uOTcWOS_EjWiQ4';
-        const CHAT_ID = '1003491320';       // Замените на ваш ID от @userinfobot
+        // 1. Инициализация маски для телефона
+        const phoneInput = document.getElementById('user-phone');
+        const phoneMask = IMask(phoneInput, {
+            mask: '+375 (00) 000-00-00',
+            lazy: false // Показывает шаблон с префиксом +375 сразу при клике/фокусе
+        });
 
+        // 2. Настройки Telegram бота
+        const BOT_TOKEN = '8939402047:AAFobx-8EJH9OA6vFJEh0uOTcWOS_EjWiQ4';
+        const CHAT_ID = '1003491320';
+        
         const form = document.getElementById('tg-form');
         const submitBtn = document.getElementById('submit-btn');
         const statusDiv = document.getElementById('form-status');
@@ -415,12 +423,20 @@
         form.addEventListener('submit', function(e) {
             e.preventDefault();
 
+            // Проверяем, заполнил ли пользователь номер полностью
+            if (!phoneMask.isComplete) {
+                statusDiv.className = 'text-center text-xs font-semibold p-3 rounded-xl bg-amber-50 text-amber-700 border border-amber-200';
+                statusDiv.innerText = '⚠️ Пожалуйста, введите номер телефона полностью.';
+                statusDiv.classList.remove('hidden');
+                return;
+            }
+
             // Считываем значения из полей
             const name = document.getElementById('user-name').value.trim();
-            const phone = document.getElementById('user-phone').value.trim();
+            const phone = phoneMask.value; // Маскированный номер (+375 (29) XXX-XX-XX)
             const comment = document.getElementById('user-comment').value.trim() || 'Не указано';
 
-            // Формируем текст сообщения для Telegram (с поддержкой HTML-разметки)
+            // Текст сообщения в Telegram
             const message = `
     🚗 <b>Новая заявка с сайта!</b>
 
@@ -434,7 +450,7 @@
             submitBtn.classList.add('opacity-75');
             submitBtn.innerHTML = '<span>Отправка...</span>';
 
-            // Отправка запроса через Telegram Bot API
+            // Отправка через Telegram API
             fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
                 method: 'POST',
                 headers: {
@@ -449,23 +465,23 @@
             .then(response => response.json())
             .then(data => {
                 if (data.ok) {
-                    // Успешная отправка
                     statusDiv.className = 'text-center text-xs font-semibold p-3 rounded-xl bg-green-50 text-green-700 border border-green-200';
                     statusDiv.innerText = '✅ Заявка успешно отправлена! Скоро мы с вами свяжемся.';
                     statusDiv.classList.remove('hidden');
+                    
+                    // Сброс формы и маски
                     form.reset();
+                    phoneMask.updateValue();
                 } else {
                     throw new Error('Ошибка Telegram API');
                 }
             })
             .catch(error => {
-                // Ошибка отправки
                 statusDiv.className = 'text-center text-xs font-semibold p-3 rounded-xl bg-red-50 text-red-700 border border-red-200';
                 statusDiv.innerText = '❌ Произошла ошибка. Пожалуйста, позвоните нам по телефону.';
                 statusDiv.classList.remove('hidden');
             })
             .finally(() => {
-                // Возвращаем кнопку в исходное состояние
                 submitBtn.disabled = false;
                 submitBtn.classList.remove('opacity-75');
                 submitBtn.innerHTML = '<span>Вызвать специалиста</span>';
